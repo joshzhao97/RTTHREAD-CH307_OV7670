@@ -11,8 +11,9 @@
 #define APPLICATIONS_OV7670_C_
 #include "ov7670.h"
 
-static struct rt_i2c_bus_device *i2c_bus = RT_NULL;
-static rt_bool_t initialized = RT_FALSE;
+u8 flag1=0;
+u8 flag2=0;
+u8 flag3=0;
 
 void CLK_init_ON(void)//输入时钟线
 {
@@ -92,6 +93,80 @@ void OV7670_RST_PW_Init(void)//复位控制
 
 //接下来就是用i2c控制寄存器了
 
+////////////////////////////
+//功能：写OV7670寄存器
+//返回：1-成功   0-失败
+unsigned char wrOV7670Reg(unsigned char regID, unsigned char regDat)
+{
+    startSCCB();
+    if(0==SCCBwriteByte(0x42))
+    {
+        stopSCCB();
+        rt_kprintf("read1 ov7670 add failed\r\n");
+        return(0);
+    }
+    rt_hw_us_delay(100);
+    if(0==SCCBwriteByte(regID))
+    {
+        stopSCCB();
+        rt_kprintf("write1 ov7670 reg failed\r\n");
+        return(0);
+    }
+    rt_hw_us_delay(100);
+    if(0==SCCBwriteByte(regDat))
+    {
+        stopSCCB();
+        rt_kprintf("read1 ov7670 data failed\r\n");
+        return(0);
+    }
+    stopSCCB();
+
+    return(1);
+}
+
+////////////////////////////
+//功能：读OV7670寄存器
+//返回：1-成功   0-失败
+unsigned char rdOV7670Reg(unsigned char regID, unsigned char *regDat)
+{
+    //通过写操作设置寄存器地址
+    startSCCB();
+    if(0==SCCBwriteByte(0x42))
+    {
+        stopSCCB();
+        flag1 = 1;
+        //rt_kprintf("read2 ov7670 add failed\r\n");
+        return(0);
+    }
+    rt_hw_us_delay(100);
+    if(0==SCCBwriteByte(regID))
+    {
+        stopSCCB();
+        flag2 = 2;
+        //rt_kprintf("write2 ov7670 reg failed\r\n");
+        return(0);
+    }
+    rt_hw_us_delay(100);
+    stopSCCB();
+
+    rt_hw_us_delay(100);
+
+    //设置寄存器地址后，才是读
+    startSCCB();
+    if(0==SCCBwriteByte(0x42 | 0x01))
+    {
+        stopSCCB();
+        flag3 = 3;
+        //rt_kprintf("read2 ov7670 add failed\r\n");
+        return(0);
+    }
+    rt_hw_us_delay(100);
+    *regDat=SCCBreadByte();
+    noAck();
+    stopSCCB();
+    return(1);
+}
+
 void OV7670_config_window(unsigned int startx,unsigned int starty,unsigned int width, unsigned int height)
 {
     rt_uint16_t endx;
@@ -101,26 +176,26 @@ void OV7670_config_window(unsigned int startx,unsigned int starty,unsigned int w
 
     endx = (startx + width);
     endy = (starty + height + height);
-    rt_i2c_master_recv(i2c_bus,REG_OV7670_VREF,RT_I2C_RD,&temp_reg1,1);
+    rdOV7670Reg(REG_OV7670_VREF,&temp_reg1);
     temp_reg1 &= 0xf0;
-    rt_i2c_master_recv(i2c_bus,REG_OV7670_HREF,RT_I2C_RD,&temp_reg2,1);
+    rdOV7670Reg(REG_OV7670_HREF,&temp_reg2);
     temp_reg2 &= 0xc0;
 
     //horizontal
     temp = temp_reg2 | ((endx & 0x7) << 3) | (startx & 0x7);
-    rt_i2c_master_send(i2c_bus, REG_OV7670_HREF, RT_I2C_WR, &temp, 1);
+    wrOV7670Reg( REG_OV7670_HREF, temp);
     temp = (startx & 0x7f8) >> 3;
-    rt_i2c_master_send(i2c_bus,REG_OV7670_HSTART,RT_I2C_WR,&temp,1);
+    wrOV7670Reg(REG_OV7670_HSTART,temp);
     temp = (endx & 0x7f8) >> 3;
-    rt_i2c_master_send(i2c_bus,REG_OV7670_HSTOP,RT_I2C_WR,&temp,1);
+    wrOV7670Reg(REG_OV7670_HSTOP,temp);
 
     //vertical
     temp = temp_reg1 | ((endy & 0x3) << 2) | (starty & 0x3);
-    rt_i2c_master_send(i2c_bus,REG_OV7670_VREF,RT_I2C_WR,&temp,1);
+    wrOV7670Reg(REG_OV7670_VREF,temp);
     temp = starty >> 2;
-    rt_i2c_master_send(i2c_bus,REG_OV7670_VSTART,RT_I2C_WR,&temp,1);
+    wrOV7670Reg(REG_OV7670_VSTART,temp);
     temp = endy >> 2;
-    rt_i2c_master_send(i2c_bus,REG_OV7670_VSTOP,RT_I2C_WR,&temp,1);
+    wrOV7670Reg(REG_OV7670_VSTOP,temp);
 }
 
 void ov7670_setreg(void)
@@ -267,164 +342,164 @@ void ov7670_setreg(void)
             , 0xc2
 };
 
-        rt_i2c_master_send(i2c_bus,0x8c,RT_I2C_WR, &ov7670_reg_data[0],1);
-        rt_i2c_master_send(i2c_bus,0x3a,RT_I2C_WR, &ov7670_reg_data[1],1);
-        rt_i2c_master_send(i2c_bus,0x40,RT_I2C_WR, &ov7670_reg_data[2],1);
-        rt_i2c_master_send(i2c_bus,0x8c,RT_I2C_WR, &ov7670_reg_data[3],1);
-        rt_i2c_master_send(i2c_bus,0x12,RT_I2C_WR, &ov7670_reg_data[4],1);
-        rt_i2c_master_send(i2c_bus,0x32,RT_I2C_WR, &ov7670_reg_data[5],1);
-        rt_i2c_master_send(i2c_bus,0x17,RT_I2C_WR, &ov7670_reg_data[6],1);
-        rt_i2c_master_send(i2c_bus,0x18,RT_I2C_WR, &ov7670_reg_data[7],1);
-        rt_i2c_master_send(i2c_bus,0x19,RT_I2C_WR, &ov7670_reg_data[8],1);
-        rt_i2c_master_send(i2c_bus,0x1a,RT_I2C_WR, &ov7670_reg_data[9],1);
-        rt_i2c_master_send(i2c_bus,0x03,RT_I2C_WR, &ov7670_reg_data[10],1);
-        rt_i2c_master_send(i2c_bus,0x0c,RT_I2C_WR, &ov7670_reg_data[11],1);
-        rt_i2c_master_send(i2c_bus,0x3e,RT_I2C_WR, &ov7670_reg_data[12],1);
-        rt_i2c_master_send(i2c_bus,0x70,RT_I2C_WR, &ov7670_reg_data[13],1);
-        rt_i2c_master_send(i2c_bus,0x71,RT_I2C_WR, &ov7670_reg_data[14],1);
-        rt_i2c_master_send(i2c_bus,0x72,RT_I2C_WR, &ov7670_reg_data[15],1);
-        rt_i2c_master_send(i2c_bus,0x73,RT_I2C_WR, &ov7670_reg_data[16],1);
-        rt_i2c_master_send(i2c_bus,0xa2,RT_I2C_WR, &ov7670_reg_data[17],1);
-        rt_i2c_master_send(i2c_bus,0x11,RT_I2C_WR, &ov7670_reg_data[18],1);
-        //rt_i2c_master_seni2c_bus,d(0x1RT_I2C_WR,5 , 0x31);          ,1
-        rt_i2c_master_send(i2c_bus,0x7a,RT_I2C_WR, &ov7670_reg_data[19],1);
-        rt_i2c_master_send(i2c_bus,0x7b,RT_I2C_WR, &ov7670_reg_data[20],1);
-        rt_i2c_master_send(i2c_bus,0x7c,RT_I2C_WR, &ov7670_reg_data[21],1);
-        rt_i2c_master_send(i2c_bus,0x7d,RT_I2C_WR, &ov7670_reg_data[22],1);
-        rt_i2c_master_send(i2c_bus,0x7e,RT_I2C_WR, &ov7670_reg_data[23],1);
-        rt_i2c_master_send(i2c_bus,0x7f,RT_I2C_WR, &ov7670_reg_data[24],1);
-        rt_i2c_master_send(i2c_bus,0x80,RT_I2C_WR, &ov7670_reg_data[25],1);
-        rt_i2c_master_send(i2c_bus,0x81,RT_I2C_WR, &ov7670_reg_data[26],1);
-        rt_i2c_master_send(i2c_bus,0x82,RT_I2C_WR, &ov7670_reg_data[27],1);
-        rt_i2c_master_send(i2c_bus,0x83,RT_I2C_WR, &ov7670_reg_data[28],1);
-        rt_i2c_master_send(i2c_bus,0x84,RT_I2C_WR, &ov7670_reg_data[29],1);
-        rt_i2c_master_send(i2c_bus,0x85,RT_I2C_WR, &ov7670_reg_data[30],1);
-        rt_i2c_master_send(i2c_bus,0x86,RT_I2C_WR, &ov7670_reg_data[31],1);
-        rt_i2c_master_send(i2c_bus,0x87,RT_I2C_WR, &ov7670_reg_data[32],1);
-        rt_i2c_master_send(i2c_bus,0x88,RT_I2C_WR, &ov7670_reg_data[33],1);
-        rt_i2c_master_send(i2c_bus,0x89,RT_I2C_WR, &ov7670_reg_data[34],1);
+        wrOV7670Reg(0x8c,ov7670_reg_data[0]);
+        wrOV7670Reg(0x3a,ov7670_reg_data[1]);
+        wrOV7670Reg(0x40,ov7670_reg_data[2]);
+        wrOV7670Reg(0x8c,ov7670_reg_data[3]);
+        wrOV7670Reg(0x12,ov7670_reg_data[4]);
+        wrOV7670Reg(0x32,ov7670_reg_data[5]);
+        wrOV7670Reg(0x17,ov7670_reg_data[6]);
+        wrOV7670Reg(0x18,ov7670_reg_data[7]);
+        wrOV7670Reg(0x19,ov7670_reg_data[8]);
+        wrOV7670Reg(0x1a,ov7670_reg_data[9]);
+        wrOV7670Reg(0x03,ov7670_reg_data[10]);
+        wrOV7670Reg(0x0c,ov7670_reg_data[11]);
+        wrOV7670Reg(0x3e,ov7670_reg_data[12]);
+        wrOV7670Reg(0x70,ov7670_reg_data[13]);
+        wrOV7670Reg(0x71,ov7670_reg_data[14]);
+        wrOV7670Reg(0x72,ov7670_reg_data[15]);
+        wrOV7670Reg(0x73,ov7670_reg_data[16]);
+        wrOV7670Reg(0xa2,ov7670_reg_data[17]);
+        wrOV7670Reg(0x11,ov7670_reg_data[18]);
+        //rt_i2c_master_send(0x15 , 0x31);
+        wrOV7670Reg(0x7a,ov7670_reg_data[19]);
+        wrOV7670Reg(0x7b,ov7670_reg_data[20]);
+        wrOV7670Reg(0x7c,ov7670_reg_data[21]);
+        wrOV7670Reg(0x7d,ov7670_reg_data[22]);
+        wrOV7670Reg(0x7e,ov7670_reg_data[23]);
+        wrOV7670Reg(0x7f,ov7670_reg_data[24]);
+        wrOV7670Reg(0x80,ov7670_reg_data[25]);
+        wrOV7670Reg(0x81,ov7670_reg_data[26]);
+        wrOV7670Reg(0x82,ov7670_reg_data[27]);
+        wrOV7670Reg(0x83,ov7670_reg_data[28]);
+        wrOV7670Reg(0x84,ov7670_reg_data[29]);
+        wrOV7670Reg(0x85,ov7670_reg_data[30]);
+        wrOV7670Reg(0x86,ov7670_reg_data[31]);
+        wrOV7670Reg(0x87,ov7670_reg_data[32]);
+        wrOV7670Reg(0x88,ov7670_reg_data[33]);
+        wrOV7670Reg(0x89,ov7670_reg_data[34]);
 
-        rt_i2c_master_send(i2c_bus,0x32,RT_I2C_WR, &ov7670_reg_data[35],1);
+        wrOV7670Reg(0x32,ov7670_reg_data[35]);
 
-        rt_i2c_master_send(i2c_bus,0x13,RT_I2C_WR, &ov7670_reg_data[36],1);
-        rt_i2c_master_send(i2c_bus,0x00,RT_I2C_WR, &ov7670_reg_data[37],1);
-        rt_i2c_master_send(i2c_bus,0x10,RT_I2C_WR, &ov7670_reg_data[38],1);
-        rt_i2c_master_send(i2c_bus,0x0d,RT_I2C_WR, &ov7670_reg_data[39],1);
-        rt_i2c_master_send(i2c_bus,0x14,RT_I2C_WR, &ov7670_reg_data[40],1);
-        rt_i2c_master_send(i2c_bus,0xa5,RT_I2C_WR, &ov7670_reg_data[41],1);
-        rt_i2c_master_send(i2c_bus,0xab,RT_I2C_WR, &ov7670_reg_data[42],1);
-        rt_i2c_master_send(i2c_bus,0x24,RT_I2C_WR, &ov7670_reg_data[43],1);
-        rt_i2c_master_send(i2c_bus,0x25,RT_I2C_WR, &ov7670_reg_data[44],1);
-        rt_i2c_master_send(i2c_bus,0x26,RT_I2C_WR, &ov7670_reg_data[45],1);
-        rt_i2c_master_send(i2c_bus,0x9f,RT_I2C_WR, &ov7670_reg_data[46],1);
-        rt_i2c_master_send(i2c_bus,0xa0,RT_I2C_WR, &ov7670_reg_data[47],1);
-    //  rt_i2c_master_send(i2c_bus,0xa1,RT_I2C_WR, 0x03);//0x0b,      ,1
-        rt_i2c_master_send(i2c_bus,0xa6,RT_I2C_WR, &ov7670_reg_data[48],1);
-        rt_i2c_master_send(i2c_bus,0xa7,RT_I2C_WR, &ov7670_reg_data[49],1);
-        rt_i2c_master_send(i2c_bus,0xa8,RT_I2C_WR, &ov7670_reg_data[50],1);
-        rt_i2c_master_send(i2c_bus,0xa9,RT_I2C_WR, &ov7670_reg_data[51],1);
-        rt_i2c_master_send(i2c_bus,0xaa,RT_I2C_WR, &ov7670_reg_data[52],1);
-        //rt_i2c_master_seni2c_bus,d(0x1RT_I2C_WR,3, 0xe5);           ,1
-        rt_i2c_master_send(i2c_bus,0x0e,RT_I2C_WR, &ov7670_reg_data[53],1);
-        rt_i2c_master_send(i2c_bus,0x0f,RT_I2C_WR, &ov7670_reg_data[54],1);
-        rt_i2c_master_send(i2c_bus,0x16,RT_I2C_WR, &ov7670_reg_data[55],1);
-        rt_i2c_master_send(i2c_bus,0x1e,RT_I2C_WR, &ov7670_reg_data[56],1);
-        rt_i2c_master_send(i2c_bus,0x21,RT_I2C_WR, &ov7670_reg_data[57],1);
-        rt_i2c_master_send(i2c_bus,0x22,RT_I2C_WR, &ov7670_reg_data[58],1);
-        rt_i2c_master_send(i2c_bus,0x29,RT_I2C_WR, &ov7670_reg_data[59],1);
-        rt_i2c_master_send(i2c_bus,0x33,RT_I2C_WR, &ov7670_reg_data[60],1);
-        rt_i2c_master_send(i2c_bus,0x35,RT_I2C_WR, &ov7670_reg_data[61],1);
-        rt_i2c_master_send(i2c_bus,0x37,RT_I2C_WR, &ov7670_reg_data[62],1);
-        rt_i2c_master_send(i2c_bus,0x38,RT_I2C_WR, &ov7670_reg_data[63],1);
-        rt_i2c_master_send(i2c_bus,0x39,RT_I2C_WR, &ov7670_reg_data[64],1);
-        rt_i2c_master_send(i2c_bus,0x3c,RT_I2C_WR, &ov7670_reg_data[65],1);
-        rt_i2c_master_send(i2c_bus,0x4d,RT_I2C_WR, &ov7670_reg_data[66],1);
-        rt_i2c_master_send(i2c_bus,0x4e,RT_I2C_WR, &ov7670_reg_data[67],1);
-        rt_i2c_master_send(i2c_bus,0x69,RT_I2C_WR, &ov7670_reg_data[68],1);
-        rt_i2c_master_send(i2c_bus,0x6b,RT_I2C_WR, &ov7670_reg_data[69],1);
-        rt_i2c_master_send(i2c_bus,0x74,RT_I2C_WR, &ov7670_reg_data[70],1);
-        rt_i2c_master_send(i2c_bus,0x8d,RT_I2C_WR, &ov7670_reg_data[71],1);
-        rt_i2c_master_send(i2c_bus,0x8e,RT_I2C_WR, &ov7670_reg_data[72],1);
-        rt_i2c_master_send(i2c_bus,0x8f,RT_I2C_WR, &ov7670_reg_data[73],1);
-        rt_i2c_master_send(i2c_bus,0x90,RT_I2C_WR, &ov7670_reg_data[74],1);
-        rt_i2c_master_send(i2c_bus,0x91,RT_I2C_WR, &ov7670_reg_data[75],1);
-        rt_i2c_master_send(i2c_bus,0x92,RT_I2C_WR, &ov7670_reg_data[76],1);
-        rt_i2c_master_send(i2c_bus,0x96,RT_I2C_WR, &ov7670_reg_data[77],1);
-        rt_i2c_master_send(i2c_bus,0x9a,RT_I2C_WR, &ov7670_reg_data[78],1);
-        rt_i2c_master_send(i2c_bus,0xb0,RT_I2C_WR, &ov7670_reg_data[79],1);
-        rt_i2c_master_send(i2c_bus,0xb1,RT_I2C_WR, &ov7670_reg_data[80],1);
-        rt_i2c_master_send(i2c_bus,0xb2,RT_I2C_WR, &ov7670_reg_data[81],1);
-        rt_i2c_master_send(i2c_bus,0xb3,RT_I2C_WR, &ov7670_reg_data[82],1);
-        rt_i2c_master_send(i2c_bus,0xb8,RT_I2C_WR, &ov7670_reg_data[83],1);
-        rt_i2c_master_send(i2c_bus,0x43,RT_I2C_WR, &ov7670_reg_data[84],1);
-        rt_i2c_master_send(i2c_bus,0x44,RT_I2C_WR, &ov7670_reg_data[85],1);
-        rt_i2c_master_send(i2c_bus,0x45,RT_I2C_WR, &ov7670_reg_data[86],1);
-        rt_i2c_master_send(i2c_bus,0x46,RT_I2C_WR, &ov7670_reg_data[87],1);
-        rt_i2c_master_send(i2c_bus,0x47,RT_I2C_WR, &ov7670_reg_data[88],1);
-        rt_i2c_master_send(i2c_bus,0x48,RT_I2C_WR, &ov7670_reg_data[89],1);
+        wrOV7670Reg(0x13,ov7670_reg_data[36]);
+        wrOV7670Reg(0x00,ov7670_reg_data[37]);
+        wrOV7670Reg(0x10,ov7670_reg_data[38]);
+        wrOV7670Reg(0x0d,ov7670_reg_data[39]);
+        wrOV7670Reg(0x14,ov7670_reg_data[40]);
+        wrOV7670Reg(0xa5,ov7670_reg_data[41]);
+        wrOV7670Reg(0xab,ov7670_reg_data[42]);
+        wrOV7670Reg(0x24,ov7670_reg_data[43]);
+        wrOV7670Reg(0x25,ov7670_reg_data[44]);
+        wrOV7670Reg(0x26,ov7670_reg_data[45]);
+        wrOV7670Reg(0x9f,ov7670_reg_data[46]);
+        wrOV7670Reg(0xa0,ov7670_reg_data[47]);
+    //  wrOV7670Reg(0xa1,0x03);//0x0b,
+        wrOV7670Reg(0xa6,ov7670_reg_data[48]);
+        wrOV7670Reg(0xa7,ov7670_reg_data[49]);
+        wrOV7670Reg(0xa8,ov7670_reg_data[50]);
+        wrOV7670Reg(0xa9,ov7670_reg_data[51]);
+        wrOV7670Reg(0xaa,ov7670_reg_data[52]);
+        //rt_i2c_master_send(0x13, 0xe5);
+        wrOV7670Reg(0x0e,ov7670_reg_data[53]);
+        wrOV7670Reg(0x0f,ov7670_reg_data[54]);
+        wrOV7670Reg(0x16,ov7670_reg_data[55]);
+        wrOV7670Reg(0x1e,ov7670_reg_data[56]);
+        wrOV7670Reg(0x21,ov7670_reg_data[57]);
+        wrOV7670Reg(0x22,ov7670_reg_data[58]);
+        wrOV7670Reg(0x29,ov7670_reg_data[59]);
+        wrOV7670Reg(0x33,ov7670_reg_data[60]);
+        wrOV7670Reg(0x35,ov7670_reg_data[61]);
+        wrOV7670Reg(0x37,ov7670_reg_data[62]);
+        wrOV7670Reg(0x38,ov7670_reg_data[63]);
+        wrOV7670Reg(0x39,ov7670_reg_data[64]);
+        wrOV7670Reg(0x3c,ov7670_reg_data[65]);
+        wrOV7670Reg(0x4d,ov7670_reg_data[66]);
+        wrOV7670Reg(0x4e,ov7670_reg_data[67]);
+        wrOV7670Reg(0x69,ov7670_reg_data[68]);
+        wrOV7670Reg(0x6b,ov7670_reg_data[69]);
+        wrOV7670Reg(0x74,ov7670_reg_data[70]);
+        wrOV7670Reg(0x8d,ov7670_reg_data[71]);
+        wrOV7670Reg(0x8e,ov7670_reg_data[72]);
+        wrOV7670Reg(0x8f,ov7670_reg_data[73]);
+        wrOV7670Reg(0x90,ov7670_reg_data[74]);
+        wrOV7670Reg(0x91,ov7670_reg_data[75]);
+        wrOV7670Reg(0x92,ov7670_reg_data[76]);
+        wrOV7670Reg(0x96,ov7670_reg_data[77]);
+        wrOV7670Reg(0x9a,ov7670_reg_data[78]);
+        wrOV7670Reg(0xb0,ov7670_reg_data[79]);
+        wrOV7670Reg(0xb1,ov7670_reg_data[80]);
+        wrOV7670Reg(0xb2,ov7670_reg_data[81]);
+        wrOV7670Reg(0xb3,ov7670_reg_data[82]);
+        wrOV7670Reg(0xb8,ov7670_reg_data[83]);
+        wrOV7670Reg(0x43,ov7670_reg_data[84]);
+        wrOV7670Reg(0x44,ov7670_reg_data[85]);
+        wrOV7670Reg(0x45,ov7670_reg_data[86]);
+        wrOV7670Reg(0x46,ov7670_reg_data[87]);
+        wrOV7670Reg(0x47,ov7670_reg_data[88]);
+        wrOV7670Reg(0x48,ov7670_reg_data[89]);
 
-        rt_i2c_master_send(i2c_bus,0x59,RT_I2C_WR, &ov7670_reg_data[90],1);
-        rt_i2c_master_send(i2c_bus,0x5a,RT_I2C_WR, &ov7670_reg_data[91],1);
-        rt_i2c_master_send(i2c_bus,0x5b,RT_I2C_WR, &ov7670_reg_data[92],1);
-        rt_i2c_master_send(i2c_bus,0x5c,RT_I2C_WR, &ov7670_reg_data[93],1);
-        rt_i2c_master_send(i2c_bus,0x5d,RT_I2C_WR, &ov7670_reg_data[94],1);
-        rt_i2c_master_send(i2c_bus,0x5e,RT_I2C_WR, &ov7670_reg_data[95],1);
+        wrOV7670Reg(0x59,ov7670_reg_data[90]);
+        wrOV7670Reg(0x5a,ov7670_reg_data[91]);
+        wrOV7670Reg(0x5b,ov7670_reg_data[92]);
+        wrOV7670Reg(0x5c,ov7670_reg_data[93]);
+        wrOV7670Reg(0x5d,ov7670_reg_data[94]);
+        wrOV7670Reg(0x5e,ov7670_reg_data[95]);
 
-        rt_i2c_master_send(i2c_bus,0x64,RT_I2C_WR, &ov7670_reg_data[96],1);
-        rt_i2c_master_send(i2c_bus,0x65,RT_I2C_WR, &ov7670_reg_data[97],1);
-        rt_i2c_master_send(i2c_bus,0x66,RT_I2C_WR, &ov7670_reg_data[98],1);
+        wrOV7670Reg(0x64,ov7670_reg_data[96]);
+        wrOV7670Reg(0x65,ov7670_reg_data[97]);
+        wrOV7670Reg(0x66,ov7670_reg_data[98]);
 
-        rt_i2c_master_send(i2c_bus,0x94,RT_I2C_WR, &ov7670_reg_data[99],1);
-        rt_i2c_master_send(i2c_bus,0x95,RT_I2C_WR, &ov7670_reg_data[100],1);
+        wrOV7670Reg(0x94,ov7670_reg_data[99]);
+        wrOV7670Reg(0x95,ov7670_reg_data[100]);
 
-        rt_i2c_master_send(i2c_bus,0x6c,RT_I2C_WR, &ov7670_reg_data[101],1);
-        rt_i2c_master_send(i2c_bus,0x6d,RT_I2C_WR, &ov7670_reg_data[102],1);
-        rt_i2c_master_send(i2c_bus,0x6e,RT_I2C_WR, &ov7670_reg_data[103],1);
-        rt_i2c_master_send(i2c_bus,0x6f,RT_I2C_WR, &ov7670_reg_data[104],1);
+        wrOV7670Reg(0x6c,ov7670_reg_data[101]);
+        wrOV7670Reg(0x6d,ov7670_reg_data[102]);
+        wrOV7670Reg(0x6e,ov7670_reg_data[103]);
+        wrOV7670Reg(0x6f,ov7670_reg_data[104]);
 
-        rt_i2c_master_send(i2c_bus,0x6a,RT_I2C_WR, &ov7670_reg_data[105],1);
-        rt_i2c_master_send(i2c_bus,0x01,RT_I2C_WR, &ov7670_reg_data[106],1);
-        rt_i2c_master_send(i2c_bus,0x02,RT_I2C_WR, &ov7670_reg_data[107],1);
+        wrOV7670Reg(0x6a,ov7670_reg_data[105]);
+        wrOV7670Reg(0x01,ov7670_reg_data[106]);
+        wrOV7670Reg(0x02,ov7670_reg_data[107]);
 
-        //rt_i2c_master_seni2c_bus,d(0x1RT_I2C_WR,3, 0xe7);           ,1
-        rt_i2c_master_send(i2c_bus,0x15,RT_I2C_WR, &ov7670_reg_data[108],1);
-        rt_i2c_master_send(i2c_bus,0x4f,RT_I2C_WR, &ov7670_reg_data[109],1);
-        rt_i2c_master_send(i2c_bus,0x50,RT_I2C_WR, &ov7670_reg_data[110],1);
-        rt_i2c_master_send(i2c_bus,0x51,RT_I2C_WR, &ov7670_reg_data[111],1);
-        rt_i2c_master_send(i2c_bus,0x52,RT_I2C_WR, &ov7670_reg_data[112],1);
-        rt_i2c_master_send(i2c_bus,0x53,RT_I2C_WR, &ov7670_reg_data[113],1);
-        rt_i2c_master_send(i2c_bus,0x54,RT_I2C_WR, &ov7670_reg_data[114],1);
-        rt_i2c_master_send(i2c_bus,0x58,RT_I2C_WR, &ov7670_reg_data[115],1);
+        //rt_i2c_master_send(0x13, 0xe7);
+        wrOV7670Reg(0x15,ov7670_reg_data[108]);
+        wrOV7670Reg(0x4f,ov7670_reg_data[109]);
+        wrOV7670Reg(0x50,ov7670_reg_data[110]);
+        wrOV7670Reg(0x51,ov7670_reg_data[111]);
+        wrOV7670Reg(0x52,ov7670_reg_data[112]);
+        wrOV7670Reg(0x53,ov7670_reg_data[113]);
+        wrOV7670Reg(0x54,ov7670_reg_data[114]);
+        wrOV7670Reg(0x58,ov7670_reg_data[115]);
 
-        rt_i2c_master_send(i2c_bus,0x41,RT_I2C_WR, &ov7670_reg_data[116],1);
-        rt_i2c_master_send(i2c_bus,0x3f,RT_I2C_WR, &ov7670_reg_data[117],1);
-        rt_i2c_master_send(i2c_bus,0x75,RT_I2C_WR, &ov7670_reg_data[118],1);
-        rt_i2c_master_send(i2c_bus,0x76,RT_I2C_WR, &ov7670_reg_data[119],1);
+        wrOV7670Reg(0x41,ov7670_reg_data[116]);
+        wrOV7670Reg(0x3f,ov7670_reg_data[117]);
+        wrOV7670Reg(0x75,ov7670_reg_data[118]);
+        wrOV7670Reg(0x76,ov7670_reg_data[119]);
 
-        rt_i2c_master_send(i2c_bus,0x4c,RT_I2C_WR, &ov7670_reg_data[120],1);
-        rt_i2c_master_send(i2c_bus,0x77,RT_I2C_WR, &ov7670_reg_data[121],1);
+        wrOV7670Reg(0x4c,ov7670_reg_data[120]);
+        wrOV7670Reg(0x77,ov7670_reg_data[121]);
 
-        rt_i2c_master_send(i2c_bus,0x3d,RT_I2C_WR, &ov7670_reg_data[122],1);
-        rt_i2c_master_send(i2c_bus,0x4b,RT_I2C_WR, &ov7670_reg_data[123],1);
-        rt_i2c_master_send(i2c_bus,0xc9,RT_I2C_WR, &ov7670_reg_data[124],1);
-        //rt_i2c_master_seni2c_bus,d(0x4RT_I2C_WR,1, 0x38);           ,1
-        rt_i2c_master_send(i2c_bus,0x56,RT_I2C_WR, &ov7670_reg_data[125],1);
-        rt_i2c_master_send(i2c_bus,0x34,RT_I2C_WR, &ov7670_reg_data[126],1);
-        rt_i2c_master_send(i2c_bus,0x3b,RT_I2C_WR, &ov7670_reg_data[127],1);
-        rt_i2c_master_send(i2c_bus,0xa4,RT_I2C_WR, &ov7670_reg_data[128],1);
+        wrOV7670Reg(0x3d,ov7670_reg_data[122]);
+        wrOV7670Reg(0x4b,ov7670_reg_data[123]);
+        wrOV7670Reg(0xc9,ov7670_reg_data[124]);
+        //rt_i2c_master_send(0x40x38);
+        wrOV7670Reg(0x56,ov7670_reg_data[125]);
+        wrOV7670Reg(0x34,ov7670_reg_data[126]);
+        wrOV7670Reg(0x3b,ov7670_reg_data[127]);
+        wrOV7670Reg(0xa4,ov7670_reg_data[128]);
 
-        rt_i2c_master_send(i2c_bus,0x96,RT_I2C_WR, &ov7670_reg_data[129],1);
-        rt_i2c_master_send(i2c_bus,0x97,RT_I2C_WR, &ov7670_reg_data[130],1);
-        rt_i2c_master_send(i2c_bus,0x98,RT_I2C_WR, &ov7670_reg_data[131],1);
-        rt_i2c_master_send(i2c_bus,0x99,RT_I2C_WR, &ov7670_reg_data[132],1);
-        rt_i2c_master_send(i2c_bus,0x9a,RT_I2C_WR, &ov7670_reg_data[133],1);
-        rt_i2c_master_send(i2c_bus,0x9b,RT_I2C_WR, &ov7670_reg_data[134],1);
-        rt_i2c_master_send(i2c_bus,0x9c,RT_I2C_WR, &ov7670_reg_data[135],1);
-        rt_i2c_master_send(i2c_bus,0x9d,RT_I2C_WR, &ov7670_reg_data[136],1);
-        rt_i2c_master_send(i2c_bus,0x9e,RT_I2C_WR, &ov7670_reg_data[137],1);
+        wrOV7670Reg(0x96,ov7670_reg_data[129]);
+        wrOV7670Reg(0x97,ov7670_reg_data[130]);
+        wrOV7670Reg(0x98,ov7670_reg_data[131]);
+        wrOV7670Reg(0x99,ov7670_reg_data[132]);
+        wrOV7670Reg(0x9a,ov7670_reg_data[133]);
+        wrOV7670Reg(0x9b,ov7670_reg_data[134]);
+        wrOV7670Reg(0x9c,ov7670_reg_data[135]);
+        wrOV7670Reg(0x9d,ov7670_reg_data[136]);
+        wrOV7670Reg(0x9e,ov7670_reg_data[137]);
 
-        rt_i2c_master_send(i2c_bus,0x09,RT_I2C_WR, &ov7670_reg_data[138],1);
-        rt_i2c_master_send(i2c_bus,0x3b,RT_I2C_WR, &ov7670_reg_data[139],1);
+        wrOV7670Reg(0x09,ov7670_reg_data[138]);
+        wrOV7670Reg(0x3b,ov7670_reg_data[139]);
 
 
 }
@@ -436,34 +511,32 @@ u8 OV7670_Init(void)
     uint8_t regH;
     uint16_t reg;
     rt_uint8_t buffer = 0x80;
-    i2c_bus = (struct rt_i2c_bus_device *)rt_device_find(OV7670_I2C_BUS_NAME);
 
-    if(i2c_bus == RT_NULL)
-    {
-        rt_kprintf("cant find %s bus\r\n",OV7670_I2C_BUS_NAME);
-    }
-    else {
-        initialized = RT_TRUE;
-    }
 
     ov7670_GPIO_Init();
     OV7670_GPIO_CONTRL_CONFIG();
-    CLK_init_ON();
+
+
     OV7670_RST_PW_Init();
 
-    OV7670_PWDN_H;
+    OV7670_PWDN_L;
+    rt_thread_mdelay(10);
+    OV7670_RST_L;
     rt_thread_mdelay(10);
     OV7670_RST_H;
-    rt_thread_mdelay(10);
-    OV7670_PWDN_L;
-    OV7670_RST_L;
 
-    rt_i2c_master_send(i2c_bus, REG_OV7670_COM7, RT_I2C_WR, &buffer, 1);
-    rt_thread_mdelay(500);
+    SCCB_GPIO_Config();
+    CLK_init_ON();
 
-   rt_i2c_master_recv(i2c_bus, REG_OV7670_MIDH, RT_I2C_RD, &regH, 1);
+
+    wrOV7670Reg( REG_OV7670_COM7, buffer);
+    rt_thread_mdelay(1000);
+
+   rdOV7670Reg(REG_OV7670_MIDH, &regH);
+   rt_kprintf("flag1:%dflag2:%dflag3:%d\r\n",flag1,flag2,flag3);
    rt_kprintf("MID:%08x\r\n",regH);
-   rt_i2c_master_recv(i2c_bus, REG_OV7670_MIDL, RT_I2C_RD, &regL, 1);
+   rdOV7670Reg( REG_OV7670_MIDL, &regL);
+   rt_kprintf("flag1:%dflag2:%dflag3:%d\r\n",flag1,flag2,flag3);
    rt_kprintf("MID:%08x\r\n",regL);
    reg = regL  | (regH << 8);
    if (reg != OV7670_MID)
@@ -475,8 +548,8 @@ u8 OV7670_Init(void)
     rt_kprintf("read MID suceess\r\n");
 }
 
-   rt_i2c_master_recv(i2c_bus, REG_OV7670_PID, RT_I2C_RD, &regH, 1);
-   rt_i2c_master_recv(i2c_bus, REG_OV7670_VER, RT_I2C_RD, &regL, 1);
+   rdOV7670Reg( REG_OV7670_PID, &regH);
+   rdOV7670Reg( REG_OV7670_VER, &regL);
    reg = regL  | (regH << 8);
    if (reg != OV7670_PID)
    {

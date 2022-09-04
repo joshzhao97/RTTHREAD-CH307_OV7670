@@ -104,8 +104,6 @@
 #define RT_USING_SERIAL
 #define RT_USING_SERIAL_V1
 #define RT_SERIAL_RB_BUFSZ 64
-#define RT_USING_I2C
-#define RT_USING_I2C_BITOPS
 #define RT_USING_PIN
 #define RT_USING_SPI
 #define RT_USING_SPI_MSD
@@ -250,10 +248,6 @@
 #define BSP_USING_UART
 #define BSP_USING_UART2
 #define BSP_UART2_FIFO_SIZE 10
-#define BSP_USING_I2C
-#define BSP_USING_I2C2
-#define BSP_I2C2_SCL_PIN 26
-#define BSP_I2C2_SDA_PIN 27
 #define BSP_USING_SPI
 #define BSP_USING_SPI1
 /* end of On-chip Peripheral Drivers */

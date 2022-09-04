@@ -47,7 +47,7 @@ void SCCB_SID_GPIO_INPUT(void)
    /* Enable GPIOA  clock */
   RCC_APB2PeriphClockCmd(SCCB_RCC, ENABLE);
   GPIO_InitStructure.GPIO_Pin =  SCCB_SID_BIT;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
  // GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_Init(SCCB_GPIO, &GPIO_InitStructure);
 }
@@ -61,19 +61,16 @@ void SCCB_SID_GPIO_INPUT(void)
 */
 void startSCCB(void)
 {
+    //SCCB_SID_GPIO_OUTPUT();
     SCCB_SID_H();     //数据线高电平
-    rt_hw_us_delay(500);
-
     SCCB_SIC_H();      //在时钟线高的时候数据线由高至低
-    rt_hw_us_delay(500);
+    rt_hw_us_delay(100);
 
     SCCB_SID_L();
-    rt_hw_us_delay(500);
+    rt_hw_us_delay(100);
 
     SCCB_SIC_L();    //数据线恢复低电平，单操作函数必要
-    rt_hw_us_delay(500);
-
-
+    //rt_hw_us_delay(100);
 }
 /*
 -----------------------------------------------
@@ -84,16 +81,16 @@ void startSCCB(void)
 */
 void stopSCCB(void)
 {
+    //SCCB_SID_GPIO_OUTPUT();
     SCCB_SID_L();
-    rt_hw_us_delay(500);
+    rt_hw_us_delay(100);
 
     SCCB_SIC_H();
-    rt_hw_us_delay(500);
+    rt_hw_us_delay(100);
 
 
     SCCB_SID_H();
-    rt_hw_us_delay(500);
-
+    rt_hw_us_delay(100);
 }
 
 /*
@@ -105,18 +102,18 @@ void stopSCCB(void)
 */
 void noAck(void)
 {
-
+    //SCCB_SID_GPIO_OUTPUT();
+    //rt_hw_us_delay(100);
     SCCB_SID_H();
-    rt_hw_us_delay(500);
-
+    //rt_hw_us_delay(50);
     SCCB_SIC_H();
-    rt_hw_us_delay(500);
+    rt_hw_us_delay(100);
 
     SCCB_SIC_L();
-    rt_hw_us_delay(500);
+    rt_hw_us_delay(100);
 
     SCCB_SID_L();
-    rt_hw_us_delay(500);
+    rt_hw_us_delay(100);
 
 }
 
@@ -133,7 +130,7 @@ unsigned char SCCBwriteByte(unsigned char m_data)
 
     for(j=0;j<8;j++) //循环8次发送数据
     {
-        if((m_data<<j)&0x80)
+        if(m_data & 0x80)
         {
             SCCB_SID_H();
         }
@@ -141,22 +138,21 @@ unsigned char SCCBwriteByte(unsigned char m_data)
         {
             SCCB_SID_L();
         }
-        rt_hw_us_delay(500);
+        m_data <<= 1;
+        rt_hw_us_delay(100);
         SCCB_SIC_H();
-        rt_hw_us_delay(500);
+        rt_hw_us_delay(100);
         SCCB_SIC_L();
-        rt_hw_us_delay(500);
-
     }
-    rt_hw_us_delay(100);
+    //rt_hw_us_delay(100);
     SCCB_SID_IN;/*设置SDA为输入*/
-    rt_hw_us_delay(500);
+    rt_hw_us_delay(100);
     SCCB_SIC_H();
     rt_hw_us_delay(100);
     if(SCCB_SID_STATE){tem=0;}   //SDA=1发送失败，返回0}
     else {tem=1;}   //SDA=0发送成功，返回1
     SCCB_SIC_L();
-    rt_hw_us_delay(500);
+    //rt_hw_us_delay(100);
         SCCB_SID_OUT;/*设置SDA为输出*/
 
     return (tem);
@@ -175,19 +171,21 @@ unsigned char SCCBreadByte(void)
     read=0x00;
 
     SCCB_SID_IN;/*设置SDA为输入*/
-    rt_hw_us_delay(500);
+    //rt_hw_us_delay(100);
+    //rt_hw_us_delay(50);
     for(j=8;j>0;j--) //循环8次接收数据
     {
-        rt_hw_us_delay(500);
+        rt_hw_us_delay(100);
         SCCB_SIC_H();
-        rt_hw_us_delay(500);
         read=read<<1;
         if(SCCB_SID_STATE)
         {
             read=read+1;
         }
+        rt_hw_us_delay(100);
         SCCB_SIC_L();
-        rt_hw_us_delay(500);
+
     }
+    SCCB_SID_OUT;
     return(read);
 }

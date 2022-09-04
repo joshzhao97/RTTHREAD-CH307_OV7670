@@ -17,8 +17,8 @@
 #include <rtdbg.h>
 #include <rtdevice.h>
 
+#include "SCCB.h"
 #include <rtdbg.h>
-#define OV7670_I2C_BUS_NAME "i2c2"
 
 #define PIC_START_X 0
 #define PIC_START_Y 0
@@ -27,7 +27,7 @@
 
 extern uint16_t camera_buffer[PIC_WIDTH * PIC_HEIGHT + 27];
 
-#define OV7670_MID 0X0008
+#define OV7670_MID 0X7FA2
 #define OV7670_PID 0X7673
 
 #define OV7670_RST_PW_RCC RCC_APB2Periph_GPIOB
