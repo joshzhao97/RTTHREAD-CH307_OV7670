@@ -7,7 +7,8 @@
 * Copyright (c) 2021 Nanjing Qinheng Microelectronics Co., Ltd.
 * SPDX-License-Identifier: Apache-2.0
 *******************************************************************************/
-/*  SCL-PB10,SDA-PB11,VS-PA5,HS-PA4,PCLK-PA6,MCLK-PA8,D7-PB9,D6-PB8,D5-PB6,D4-PC11,D3-PC9,D2-PC8,D1-PA10,D0-PA9,RST-PB0（or gnd?）,PWDN-PB1(or gnd?)*/
+/*  SCL-PB10,SDA-PB11,VS-G,HS-PA4,PCLK-PA6,MCLK-PA8,D7-PB9,D6-PB8,D5-PB6,D4-PC11,D3-PC9,D2-PC8,D1-PA10,D0-PA9,RST-PB0（or gnd?）,PWDN-PB1(or gnd?)*/
+//现在有数据，DVP采集不到
 #include "ch32v30x.h"
 #include <rtthread.h>
 #include <rthw.h>
@@ -21,7 +22,11 @@
 #include "spi_msd.h"
 #include <rtdbg.h>
 
+#include "ov7670.h"
+
 /* Global typedef */
+
+
 
 u8 temperature[5][128]={
 /*--  文字:  当  --*/
@@ -89,6 +94,9 @@ u8 temperature[5][128]={
 
 #define LED0_PIN  35   //PC3
 
+
+
+
 /* Global Variable */
 rt_device_t dev;
 
@@ -100,11 +108,9 @@ rt_device_t dev;
  * @return  none
  */
 
-
-
-
 int main(void)
 {
+    u8 lightmode=0,saturation=2,brightness=2,contrast=2,effect=0;
     rt_kprintf("MCU: CH32V307\n");
 	rt_kprintf("SysClk: %dHz\n",SystemCoreClock);
     rt_kprintf("www.wch.cn\n");
@@ -147,11 +153,17 @@ int main(void)
 	    LOG_E("oled device open error\r\n");
 	    return -RT_EINVAL;
 	}*/
+    while(OV7670_Init() != RT_EOK);
+    rt_kprintf("ov7670_init sucees\r\n");
+    rt_thread_mdelay(1500);
+    OV7670_Light_Mode(lightmode);
+    OV7670_Color_Saturation(saturation);
+    OV7670_Brightness(brightness);
+    OV7670_Contrast(contrast);
+    OV7670_Special_Effects(effect);
 
 	while(1)
 	{
-
-
 	    rt_thread_mdelay(1000);
 	}
 }

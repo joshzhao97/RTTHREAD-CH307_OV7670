@@ -63,6 +63,7 @@ void startSCCB(void)
 {
     //SCCB_SID_GPIO_OUTPUT();
     SCCB_SID_H();     //数据线高电平
+    rt_hw_us_delay(20);
     SCCB_SIC_H();      //在时钟线高的时候数据线由高至低
     rt_hw_us_delay(100);
 
@@ -70,7 +71,7 @@ void startSCCB(void)
     rt_hw_us_delay(100);
 
     SCCB_SIC_L();    //数据线恢复低电平，单操作函数必要
-    //rt_hw_us_delay(100);
+    rt_hw_us_delay(100);
 }
 /*
 -----------------------------------------------
@@ -105,7 +106,7 @@ void noAck(void)
     //SCCB_SID_GPIO_OUTPUT();
     //rt_hw_us_delay(100);
     SCCB_SID_H();
-    //rt_hw_us_delay(50);
+    rt_hw_us_delay(20);
     SCCB_SIC_H();
     rt_hw_us_delay(100);
 
@@ -143,8 +144,9 @@ unsigned char SCCBwriteByte(unsigned char m_data)
         SCCB_SIC_H();
         rt_hw_us_delay(100);
         SCCB_SIC_L();
+        rt_hw_us_delay(100);
     }
-    //rt_hw_us_delay(100);
+    rt_hw_us_delay(100);
     SCCB_SID_IN;/*设置SDA为输入*/
     rt_hw_us_delay(100);
     SCCB_SIC_H();
@@ -152,7 +154,7 @@ unsigned char SCCBwriteByte(unsigned char m_data)
     if(SCCB_SID_STATE){tem=0;}   //SDA=1发送失败，返回0}
     else {tem=1;}   //SDA=0发送成功，返回1
     SCCB_SIC_L();
-    //rt_hw_us_delay(100);
+    rt_hw_us_delay(100);
         SCCB_SID_OUT;/*设置SDA为输出*/
 
     return (tem);
@@ -172,7 +174,7 @@ unsigned char SCCBreadByte(void)
 
     SCCB_SID_IN;/*设置SDA为输入*/
     //rt_hw_us_delay(100);
-    //rt_hw_us_delay(50);
+    rt_hw_us_delay(50);
     for(j=8;j>0;j--) //循环8次接收数据
     {
         rt_hw_us_delay(100);
@@ -182,9 +184,9 @@ unsigned char SCCBreadByte(void)
         {
             read=read+1;
         }
-        rt_hw_us_delay(100);
+        rt_hw_us_delay(50);
         SCCB_SIC_L();
-
+        rt_hw_us_delay(50);
     }
     SCCB_SID_OUT;
     return(read);

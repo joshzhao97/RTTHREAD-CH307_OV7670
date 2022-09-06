@@ -170,6 +170,13 @@ extern uint16_t camera_buffer[PIC_WIDTH * PIC_HEIGHT + 27];
 #define REG_OV7670_HAECC6 0xa9//基于直方图的AEC/AGC的控制6
 #define REG_OV7670_HAECC7 0xaa//基于直方图的AEC/AGC的控制7
 
+//DVP相关设置
+#define JPEG_MODE 1
+#define DVP_Work_Mode JPEG_MODE
+
+
+
+
 
 
 void CLK_init_ON(void);
@@ -180,11 +187,12 @@ unsigned char OV7670_init(void);
 void ov7670_GPIO_Init(void);
 void ov7670_setreg(void);
 u8 OV7670_Init(void);
+void DVP_Init(void);
 void OV7670_Light_Mode(u8 mode);
 void OV7670_Color_Saturation(u8 sta);
 void OV7670_Brightness(u8 bright);
 void OV7670_Contrast(u8 contrast);
-void OV7670_Special_Effect(u8 eff);
+void OV7670_Special_Effects(u8 eff);
 void set_cif(void);
 
 
