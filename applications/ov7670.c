@@ -10,53 +10,53 @@
 #ifndef APPLICATIONS_OV7670_C_
 #define APPLICATIONS_OV7670_C_
 #include "ov7670.h"
+#include "ili9431.h"
 
-//初始化寄存器序列及其对应的值
-static const u8 ov7670_init_reg_tbl[][2]=
+const u8 ov7670_init_reg_tbl[][2]=
 {
-    /*以下为OV7670 QVGA RGB565参数  */
-    {0x3a, 0x04},//dummy
-    {0x40, 0xd0},//565
-    {0x12, 0x14},//QVGA,RGB输出
+        /*以下为OV7670 QVGA RGB565参数  */
+            {0x3a, 0x04},//dummy
+            {0x40, 0xd0},//565
+            {0x12, 0x14},//QVGA,RGB输出
 
-    //输出窗口设置
-    {0x32, 0x80},//HREF control bit[2:0] HREF start 3 LSB    bit[5:3] HSTOP HREF end 3LSB
-    {0x17, 0x16},//HSTART start high 8-bit MSB
-    {0x18, 0x04},//5 HSTOP end high 8-bit
-    {0x19, 0x02},
-    {0x1a, 0x7b},//0x7a,
-    {0x03, 0x06},//0x0a,帧竖直方向控制
+            //输出窗口设置
+            {0x32, 0x80},//HREF control bit[2:0] HREF start 3 LSB    bit[5:3] HSTOP HREF end 3LSB
+            {0x17, 0x16},//HSTART start high 8-bit MSB
+            {0x18, 0x04},//5 HSTOP end high 8-bit
+            {0x19, 0x02},
+            {0x1a, 0x7b},//0x7a,
+            {0x03, 0x06},//0x0a,帧竖直方向控制
 
-    {0x0c, 0x00},
-    {0x15, 0x00},//0x00
-    {0x3e, 0x00},//10
-    {0x70, 0x3a},
-    {0x71, 0x35},
-    {0x72, 0x11},
-    {0x73, 0x00},//
+            {0x0c, 0x00},
+            {0x15, 0x00},//0x00
+            {0x3e, 0x00},//10
+            {0x70, 0x3a},
+            {0x71, 0x35},
+            {0x72, 0x11},
+            {0x73, 0x00},//
 
-    {0xa2, 0x02},//15
-    {0x11, 0x81},//时钟分频设置,0,不分频.
-    {0x7a, 0x20},
-    {0x7b, 0x1c},
-    {0x7c, 0x28},
+            {0xa2, 0x02},//15
+            {0x11, 0x81},//时钟分频设置,0,不分频.
+            {0x7a, 0x20},
+            {0x7b, 0x1c},
+            {0x7c, 0x28},
 
-    {0x7d, 0x3c},//20
-    {0x7e, 0x55},
-    {0x7f, 0x68},
-    {0x80, 0x76},
-    {0x81, 0x80},
+            {0x7d, 0x3c},//20
+            {0x7e, 0x55},
+            {0x7f, 0x68},
+            {0x80, 0x76},
+            {0x81, 0x80},
 
-    {0x82, 0x88},
-    {0x83, 0x8f},
-    {0x84, 0x96},
-    {0x85, 0xa3},
-    {0x86, 0xaf},
+            {0x82, 0x88},
+            {0x83, 0x8f},
+            {0x84, 0x96},
+            {0x85, 0xa3},
+            {0x86, 0xaf},
 
-    {0x87, 0xc4},//30
-    {0x88, 0xd7},
-    {0x89, 0xe8},
-    {0x13, 0xe0},
+            {0x87, 0xc4},//30
+            {0x88, 0xd7},
+            {0x89, 0xe8},
+            {0x13, 0xe0},
     {0x00, 0x00},//AGC
 
     {0x10, 0x00},
@@ -65,7 +65,7 @@ static const u8 ov7670_init_reg_tbl[][2]=
     {0xa5, 0x05},
     {0xab, 0x07},
 
-    {0x24, 0x75},//40
+    {0x24, 0x75},
     {0x25, 0x63},
     {0x26, 0xA5},
     {0x9f, 0x78},
@@ -77,19 +77,19 @@ static const u8 ov7670_init_reg_tbl[][2]=
     {0xa8, 0xf0},
     {0xa9, 0x90},
 
-    {0xaa, 0x94},//50
+    {0xaa, 0x94},
     {0x13, 0xe5},
     {0x0e, 0x61},
     {0x0f, 0x4b},
     {0x16, 0x02},
 
-    {0x1e, 0x27},//图像输出镜像控制.0x07
+    {0x1e, 0x27},//图像输出镜像控制.0x07(改)
     {0x21, 0x02},
     {0x22, 0x91},
     {0x29, 0x07},
     {0x33, 0x0b},
 
-    {0x35, 0x0b},//60
+    {0x35, 0x0b},
     {0x37, 0x1d},
     {0x38, 0x71},
     {0x39, 0x2a},
@@ -97,12 +97,12 @@ static const u8 ov7670_init_reg_tbl[][2]=
 
     {0x4d, 0x40},
     {0x4e, 0x20},
-    {0x69, 0x00},
-    {0x6b, 0x40},//PLL*4=48Mhz
+    {0x69, 0x55},//固定增益值(改)
+    {0x6b, 0x80},//PLL 重要参数 （改）PLL*6=48Mhz
     {0x74, 0x19},
     {0x8d, 0x4f},
 
-    {0x8e, 0x00},//70
+    {0x8e, 0x00},
     {0x8f, 0x00},
     {0x90, 0x00},
     {0x91, 0x00},
@@ -114,7 +114,7 @@ static const u8 ov7670_init_reg_tbl[][2]=
     {0xb1, 0x0c},
     {0xb2, 0x0e},
 
-    {0xb3, 0x82},//80
+    {0xb3, 0x82},
     {0xb8, 0x0a},
     {0x43, 0x14},
     {0x44, 0xf0},
@@ -126,7 +126,7 @@ static const u8 ov7670_init_reg_tbl[][2]=
     {0x59, 0x88},
     {0x5a, 0x88},
 
-    {0x5b, 0x44},//90
+    {0x5b, 0x44},
     {0x5c, 0x67},
     {0x5d, 0x49},
     {0x5e, 0x0e},
@@ -139,7 +139,6 @@ static const u8 ov7670_init_reg_tbl[][2]=
     {0x6c, 0x0a},
     {0x6d, 0x55},
 
-
     {0x4f, 0x80},
     {0x50, 0x80},
     {0x51, 0x00},
@@ -147,45 +146,32 @@ static const u8 ov7670_init_reg_tbl[][2]=
     {0x53, 0x5e},
     {0x54, 0x80},
 
-    //{0x54, 0x40},//110
-
-
-    {0x09, 0x03},//驱动能力最大
-
-    {0x6e, 0x11},//100
+    {0x6e, 0x11},//
     {0x6f, 0x9f},//0x9e for advance AWB
-    {0x55, 0x00},//亮度
-    {0x56, 0x40},//对比度 0x40
-    {0x57, 0x40},//0x40,  change according to Jim's request
-///////////////////////////////////////////////////////////////////////
-//以下部分代码由开源电子网网友:duanzhang512 提出
-//添加此部分代码将可以获得更好的成像效果,但是最下面一行会有蓝色的抖动.
-//如不想要,可以屏蔽此部分代码.然后将:OV7670_Window_Set(12,176,240,320);
-//改为:OV7670_Window_Set(12,174,240,320);,即可去掉最下一行的蓝色抖动
+
     {0x6a, 0x40},
     {0x01, 0x40},
     {0x02, 0x40},
     {0x13, 0xe7},
-    {0x15, 0x00},
+    {0x15, 0x00}, //重要参数(改)HSYNC\VSYNC\HREF电平控制
 
 
+    {0x55, 0x0A},//亮度（改）
+    {0x56, 0x4f},//对比度 （改）
     {0x58, 0x9e},
-
     {0x41, 0x08},
-    {0x3f, 0x00},
+    {0x3f, 0x05},//边缘增强调整
     {0x75, 0x05},
     {0x76, 0xe1},
-    {0x4c, 0x00},
-    {0x77, 0x01},
-    {0x3d, 0xc2},
+    {0x4c, 0x0F},//噪声抑制强度
+    {0x77, 0x0a},
+    {0x3d, 0xc2},//0xc0,
     {0x4b, 0x09},
     {0xc9, 0x60},
     {0x41, 0x38},
-
     {0x34, 0x11},
-    {0x3b, 0x02},
-
-    {0xa4, 0x89},
+    {0x3b, 0x02},//0x00,//0x02,
+    {0xa4, 0x89},//0x88,
     {0x96, 0x00},
     {0x97, 0x30},
     {0x98, 0x20},
@@ -196,7 +182,6 @@ static const u8 ov7670_init_reg_tbl[][2]=
     {0x9d, 0x4c},
     {0x9e, 0x3f},
     {0x78, 0x04},
-
     {0x79, 0x01},
     {0xc8, 0xf0},
     {0x79, 0x0f},
@@ -220,9 +205,204 @@ static const u8 ov7670_init_reg_tbl[][2]=
     {0x79, 0x05},
     {0xc8, 0x30},
     {0x79, 0x26},
-    {0x09, 0x00},
-///////////////////////////////////////////////////////////////////////
+    {0x09, 0x02},
+    {0x3b, 0x42},//0x82,//0xc0,//0xc2,  //night mode
 
+};
+const u8 ov7670_init_reg_tb2[][2]=
+{
+        /*以下为OV7670 QVGA RGB565参数  */
+        {0x3a, 0x0C},//
+        {0x40, 0xd0},//565
+        {0x12, 0x14},//QVGA,RGB输出
+
+        //输出窗口设置
+        {0x32, 0x80},//HREF control bit[2:0] HREF start 3 LSB    bit[5:3] HSTOP HREF end 3LSB
+        {0x17, 0x16},//HSTART start high 8-bit MSB
+        {0x18, 0x04},//HSTOP end high 8-bit
+        {0x19, 0x02},//VSTART start high 8-bit MSB
+        {0x1a, 0x7A},//VSTOP end high 8-bit
+        {0x03, 0x05},//帧竖直方向控制VRFE
+
+        {0x0c, 0x00},
+        {0x3e, 0x00},//
+        {0x70, 0x3A},
+        {0x71, 0x35},
+        {0x72, 0x11},
+        {0x73, 0x00},//
+
+        {0xa2, 0x02},
+        {0x11, 0x81},//时钟分频设置,0,不分频.
+        {0x7a, 0x20},
+        {0x7b, 0x1c},
+        {0x7c, 0x28},
+
+        {0x7d, 0x3c},
+        {0x7e, 0x55},
+        {0x7f, 0x68},
+        {0x80, 0x76},
+        {0x81, 0x80},
+
+        {0x82, 0x88},
+        {0x83, 0x8f},
+        {0x84, 0x96},
+        {0x85, 0xa3},
+        {0x86, 0xaf},
+
+        {0x87, 0xc4},
+        {0x88, 0xd7},
+        {0x89, 0xe8},
+        {0x13, 0xe0},
+        {0x00, 0x00},//AGC
+
+        {0x10, 0x00},
+        {0x0d, 0x00},//全窗口， 位[5:4]: 01 半窗口，10 1/4窗口，11 1/4窗口
+        {0x14, 0x28},//0x38, limit the max gain
+        {0xa5, 0x05},
+        {0xab, 0x07},
+
+        {0x24, 0x75},
+        {0x25, 0x63},
+        {0x26, 0xA5},
+        {0x9f, 0x78},
+        {0xa0, 0x68},
+
+        {0xa1, 0x03},//0x0b,
+        {0xa6, 0xdf},//0xd8,
+        {0xa7, 0xdf},//0xd8,
+        {0xa8, 0xf0},
+        {0xa9, 0x90},
+
+        {0xaa, 0x94},
+        {0x13, 0xe5},
+        {0x0e, 0x61},
+        {0x0f, 0x4b},
+        {0x16, 0x02},
+
+        {0x1e, 0x27},//图像输出镜像控制.0x07(改)
+        {0x21, 0x02},
+        {0x22, 0x91},
+        {0x29, 0x07},
+        {0x33, 0x0b},
+
+        {0x35, 0x0b},
+        {0x37, 0x1d},
+        {0x38, 0x71},
+        {0x39, 0x2a},
+        {0x3c, 0x78},
+
+        {0x4d, 0x40},
+        {0x4e, 0x20},
+        {0x69, 0x55},//固定增益值(改)
+        {0x6b, 0xC0},//PLL 重要参数 （改）PLL*4=48Mhz
+        {0x74, 0x19},
+        {0x8d, 0x4f},
+
+        {0x8e, 0x00},
+        {0x8f, 0x00},
+        {0x90, 0x00},
+        {0x91, 0x00},
+        {0x92, 0x00},//0x19,//0x66
+
+        {0x96, 0x00},
+        {0x9a, 0x80},
+        {0xb0, 0x84},
+        {0xb1, 0x0c},
+        {0xb2, 0x0e},
+
+        {0xb3, 0x82},
+        {0xb8, 0x0a},
+        {0x43, 0x14},
+        {0x44, 0xf0},
+        {0x45, 0x34},
+
+        {0x46, 0x58},
+        {0x47, 0x28},
+        {0x48, 0x3a},
+        {0x59, 0x88},
+        {0x5a, 0x88},
+
+        {0x5b, 0x44},
+        {0x5c, 0x67},
+        {0x5d, 0x49},
+        {0x5e, 0x0e},
+        {0x64, 0x04},
+        {0x65, 0x20},
+
+        {0x66, 0x05},
+        {0x94, 0x04},
+        {0x95, 0x08},
+        {0x6c, 0x0a},
+        {0x6d, 0x55},
+
+        {0x4f, 0x80},
+        {0x50, 0x80},
+        {0x51, 0x00},
+        {0x52, 0x22},
+        {0x53, 0x5e},
+        {0x54, 0x80},
+
+        {0x6e, 0x11},//
+        {0x6f, 0x9f},//0x9e for advance AWB
+
+        {0x6a, 0x40},
+        {0x01, 0x40},
+        {0x02, 0x40},
+        {0x13, 0xe7},
+        {0x15, 0x00}, //重要参数(改)HSYNC\VSYNC\HREF电平控制
+
+
+        {0x55, 0x0A},//亮度（改）
+        {0x56, 0x4f},//对比度 （改）
+        {0x58, 0x9e},
+        {0x41, 0x08},
+        {0x3f, 0x05},//边缘增强调整
+        {0x75, 0x05},
+        {0x76, 0xe1},
+        {0x4c, 0x0F},//噪声抑制强度
+        {0x77, 0x0a},
+        {0x3d, 0xc2},//0xc0,
+        {0x4b, 0x09},
+        {0xc9, 0x60},
+        {0x41, 0x38},
+        {0x34, 0x11},
+        {0x3b, 0x02},//0x00,//0x02,
+        {0xa4, 0x89},//0x88,
+        {0x96, 0x00},
+        {0x97, 0x30},
+        {0x98, 0x20},
+        {0x99, 0x30},
+        {0x9a, 0x84},
+        {0x9b, 0x29},
+        {0x9c, 0x03},
+        {0x9d, 0x4c},
+        {0x9e, 0x3f},
+        {0x78, 0x04},
+        {0x79, 0x01},
+        {0xc8, 0xf0},
+        {0x79, 0x0f},
+        {0xc8, 0x00},
+        {0x79, 0x10},
+        {0xc8, 0x7e},
+        {0x79, 0x0a},
+        {0xc8, 0x80},
+        {0x79, 0x0b},
+        {0xc8, 0x01},
+        {0x79, 0x0c},
+        {0xc8, 0x0f},
+        {0x79, 0x0d},
+        {0xc8, 0x20},
+        {0x79, 0x09},
+        {0xc8, 0x80},
+        {0x79, 0x02},
+        {0xc8, 0xc0},
+        {0x79, 0x03},
+        {0xc8, 0x40},
+        {0x79, 0x05},
+        {0xc8, 0x30},
+        {0x79, 0x26},
+        {0x09, 0x02},
+        {0x3b, 0x42},//0x82,//0xc0,//0xc2,  //night mode
 };
 
 u8 flag1=0;
@@ -230,17 +410,17 @@ u8 flag2=0;
 u8 flag3=0;
 
 rt_uint32_t JPEG_DVPDMAaddr0 = 0x20005000;
-rt_uint32_t JPEG_DVPDMAaddr1 = 0x20005000 + PIC_WIDTH;
+rt_uint32_t JPEG_DVPDMAaddr1 = 0x20005000 + 320 * 2;
 
 rt_uint32_t DVP_ROW_cnt = 0;
-volatile rt_uint32_t frame_cnt = 0;
-volatile rt_uint32_t addr_cnt = 0;
+rt_uint32_t frame_cnt = 0;
+ rt_uint32_t addr_cnt = 0;
 volatile rt_uint32_t href_cnt = 0;
 void DVP_IRQHandler (void) __attribute__((interrupt("WCH-Interrupt-fast")));
 
-void uart2_send_data(rt_uint8_t t)
+void uart2_send_data(rt_uint16_t t)
 {
-   // while( USART_GetFlagStatus(USART2, USART_FLAG_TC) == RESET);
+    while( USART_GetFlagStatus(USART2, USART_FLAG_TC) == RESET);
     USART_SendData(USART2, t);
     while( USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET);
 }
@@ -250,17 +430,17 @@ void CLK_init_ON(void)//输入时钟线
     GPIO_InitTypeDef GPIO_InitStructrue;
     RCC_APB2PeriphClockCmd(OV7670_MCLK_RCC, ENABLE);
     GPIO_InitStructrue.GPIO_Pin = OV7670_MCLK_PIN;
-    GPIO_InitStructrue.GPIO_Speed = GPIO_Speed_10MHz;
+    GPIO_InitStructrue.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_InitStructrue.GPIO_Mode = GPIO_Mode_AF_PP;
     GPIO_Init(OV7670_MCLK_GPIO, &GPIO_InitStructrue);
-    RCC_MCOConfig(RCC_MCO_HSE);
+    RCC_MCOConfig(RCC_MCO_HSE);//8MHZ
 }
 void CLK_init_OFF(void)
 {
     GPIO_InitTypeDef GPIO_InitStructrue;
     RCC_APB2PeriphClockCmd(OV7670_MCLK_RCC, ENABLE);
     GPIO_InitStructrue.GPIO_Pin = OV7670_MCLK_PIN;
-    GPIO_InitStructrue.GPIO_Speed = GPIO_Speed_10MHz;
+    GPIO_InitStructrue.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_InitStructrue.GPIO_Mode = GPIO_Mode_Out_PP;
     GPIO_Init(OV7670_MCLK_GPIO, &GPIO_InitStructrue);
 }
@@ -307,8 +487,9 @@ void OV7670_GPIO_CONTRL_CONFIG(void)//控制线
     GPIO_InitTypeDef GPIO_InitStructrue;
     RCC_APB2PeriphClockCmd(OV7670_VSYNC_RCC | OV7670_HSYNC_RCC | OV7670_PIXCLK_RCC, ENABLE);
     GPIO_InitStructrue.GPIO_Pin = OV7670_VSYNC_PIN | OV7670_HSYNC_PIN | OV7670_PIXCLK_PIN;
-    GPIO_InitStructrue.GPIO_Mode = GPIO_Mode_IPU;
-    GPIO_Init(OV7670_PIXCLK_GPIO, &GPIO_InitStructrue);
+
+    GPIO_InitStructrue.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+    GPIO_Init(OV7670_HSYNC_GPIO, &GPIO_InitStructrue);
     //RCC_MCOConfig(RCC_MCO_HSE);
 }
 
@@ -316,7 +497,7 @@ void OV7670_RST_PW_Init(void)//复位控制
 {
     GPIO_InitTypeDef GPIO_InitStructrue;
     RCC_APB2PeriphClockCmd(OV7670_RST_PW_RCC, ENABLE);
-    GPIO_InitStructrue.GPIO_Pin = OV7670_RST_PW_Pin;
+    GPIO_InitStructrue.GPIO_Pin = OV7670_RST_PW_Pin ;
     GPIO_InitStructrue.GPIO_Mode = GPIO_Mode_Out_PP;
     GPIO_InitStructrue.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(OV7670_RST_PW_GPIO, &GPIO_InitStructrue);
@@ -397,42 +578,44 @@ unsigned char rdOV7670Reg(unsigned char regID, unsigned char *regDat)
     stopSCCB();
     return(1);
 }
+
+
 void OV7670_config_window(unsigned int startx,unsigned int starty,unsigned int width, unsigned int height)
 {
-    rt_uint16_t endx;
-    rt_uint16_t endy;
-    rt_uint8_t temp_reg1,temp_reg2;
-    rt_uint8_t temp = 0;
+        unsigned int endx;
+        unsigned int endy;// "v*2"必须
+        unsigned char temp_reg1, temp_reg2;
+        unsigned char temp=0;
 
-    endx = (startx + width);
-    endy = (starty + height + height);
-    rdOV7670Reg(REG_OV7670_VREF,&temp_reg1);
-    temp_reg1 &= 0xf0;
-    rdOV7670Reg(REG_OV7670_HREF,&temp_reg2);
-    temp_reg2 &= 0xc0;
+        endx=(startx+width*2)%784;
+        endy=(starty+height+height);// "v*2"必须
+            rdOV7670Reg(0x03, &temp_reg1 );
+        temp_reg1 &= 0xf0;//Y
+        rdOV7670Reg(0x32, &temp_reg2 );
+        temp_reg2 &= 0xc0;//X
 
-    //horizontal
-    temp = temp_reg2 | ((endx & 0x7) << 3) | (startx & 0x7);
-    wrOV7670Reg( REG_OV7670_HREF, temp);
-    temp = (startx & 0x7f8) >> 3;
-    wrOV7670Reg(REG_OV7670_HSTART,temp);
-    temp = (endx & 0x7f8) >> 3;
-    wrOV7670Reg(REG_OV7670_HSTOP,temp);
+        // Horizontal
+        temp = temp_reg2|((endx&0x7)<<3)|(startx&0x7);
+        wrOV7670Reg(0x32, temp );
+        temp = (startx&0x7F8)>>3;
+        wrOV7670Reg(0x17, temp );
+        temp = (endx&0x7F8)>>3;
+        wrOV7670Reg(0x18, temp );
 
-    //vertical
-    temp = temp_reg1 | ((endy & 0x3) << 2) | (starty & 0x3);
-    wrOV7670Reg(REG_OV7670_VREF,temp);
-    temp = starty >> 2;
-    wrOV7670Reg(REG_OV7670_VSTART,temp);
-    temp = endy >> 2;
-    wrOV7670Reg(REG_OV7670_VSTOP,temp);
+        // Vertical
+        temp =temp_reg1|((endy&0x3)<<2)|(starty&0x3);
+        wrOV7670Reg(0x03, temp );
+        temp = (starty & 0X3FC)>>2;
+        wrOV7670Reg(0x19, temp );
+        temp = (endy & 0X3FC)>>2;
+        wrOV7670Reg(0x1A, temp );
 }
 
 void ov7670_setreg(void)
 {
     rt_uint32_t i = 0;
     rt_uint8_t flag = 0;
-    /* rt_uint8_t ov7670_reg_data[200]= { 0x00
+     /*rt_uint8_t ov7670_reg_data[200]= { 0x00
             , 0x04
             , 0xd0
             , 0x00
@@ -733,9 +916,9 @@ void ov7670_setreg(void)
         wrOV7670Reg(0x09,ov7670_reg_data[138]);
         wrOV7670Reg(0x3b,ov7670_reg_data[139]);*/
 
-    for(i = 0;i < sizeof(ov7670_init_reg_tbl) / sizeof(ov7670_init_reg_tbl[0]);i++)
+    for(i = 0;i < sizeof(ov7670_init_reg_tb2) / sizeof(ov7670_init_reg_tb2[0]);i++)
     {
-       flag = wrOV7670Reg(ov7670_init_reg_tbl[i][0], ov7670_init_reg_tbl[i][1]);
+       flag = wrOV7670Reg(ov7670_init_reg_tb2[i][0], ov7670_init_reg_tb2[i][1]);
        if(flag == 1)
        {
            rt_kprintf("set reg suceess\r\n");
@@ -750,25 +933,24 @@ void ov7670_setreg(void)
 
 void DVP_Init(void)
 {
-    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
     NVIC_InitTypeDef NVIC_InitStruct = {0};
 
     RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DVP, ENABLE);
 
     DVP->CR0 &= ~RB_DVP_MSK_DAT_MOD;
 
-#if  (DVP_Work_Mode == JPEG_MODE)
+#if  (DVP_Work_Mode == RGB565_MODE)
 
-    DVP->CR0 |= RB_DVP_D8_MOD ;
-    DVP->CR1 &= ~(RB_DVP_ALL_CLR | RB_DVP_RCV_CLR);
-    DVP->COL_NUM = PIC_WIDTH * 2;
-    DVP->ROW_NUM = PIC_HEIGHT;
+    DVP->CR0 |= RB_DVP_D8_MOD;//V_POLR?
+    DVP->CR1 &= ~((RB_DVP_ALL_CLR) | RB_DVP_RCV_CLR);
+    DVP->COL_NUM = 640;
+    DVP->ROW_NUM = 240;
 
-    DVP->DMA_BUF0 = JPEG_DVPDMAaddr0;
-    DVP->DMA_BUF1 = JPEG_DVPDMAaddr1;
+    DVP->DMA_BUF0 = RGB565_DVPDMAaddr0;
+    DVP->DMA_BUF1 = RGB565_DVPDMAaddr1;
 #endif
     DVP->CR1 &= ~RB_DVP_FCRC;
-    DVP->CR1 |= DVP_RATE_25P;//25%
+    DVP->CR1 |= DVP_RATE_100P;//25%
 
     DVP->IER |= RB_DVP_IE_STP_FRM;
     DVP->IER |= RB_DVP_IE_FIFO_OV;
@@ -982,58 +1164,67 @@ void OV7670_Special_Effects(u8 eft)
 
 void DVP_IRQHandler(void)
 {
-    //rt_kprintf("ENTER DVP IRQ\r\n");
-    //rt_kprintf("href_cnt%d\r\n",href_cnt);
+    /*//rt_kprintf("ENTER DVP IRQ\r\n");
+
     if(DVP->IFR & RB_DVP_IF_ROW_DONE)
     {
         DVP->IFR &= ~RB_DVP_IF_ROW_DONE;
-#if (DVP_Work_Mode == JPEG_MODE)
-        //rt_kprintf("rowdone\r\n");
         href_cnt++;
 
         if(addr_cnt % 2)
         {
+
             addr_cnt++;
-            DVP->DMA_BUF1 += PIC_WIDTH * 2;
+            DVP->DMA_BUF1 += PIC_WIDTH  * 4;
+
         }
         else
         {
+
             addr_cnt++;
-            DVP->DMA_BUF0 += PIC_WIDTH * 2;
+            DVP->DMA_BUF0 += PIC_WIDTH * 4;
         }
-#endif
     }
 
     if(DVP->IFR & RB_DVP_IF_FRM_DONE)
     {
-        //rt_kprintf("fram done\r\n");
+
         DVP->IFR &= ~RB_DVP_IF_FRM_DONE;
-#if (DVP_Work_Mode == JPEG_MODE)
+#if (DVP_Work_Mode == RGB565_MODE)
         DVP->CR0 &= ~RB_DVP_ENABLE;
         //USING UART2 SEND DATA
         {
             rt_uint32_t i;
             rt_uint8_t val;
+            rt_uint16_t color;
+            //rt_kprintf("DVP FRAM DONE href——cnt%d\r\n",href_cnt);
+            //rt_kprintf("DVP FRAM DONE ADDR_cnt%d\r\n",addr_cnt);
             href_cnt = href_cnt * PIC_WIDTH;
 
-            for(i = 0;i < href_cnt;i++)
+            for(i = 0;i < href_cnt  * 2 ;i = i + 1)
             {
-                val = *(rt_uint8_t*)(0x20005000 + i);
-                uart2_send_data(val);
-                //rt_kprintf("send ov data sucess\r\n");
+                color = (*(rt_uint8_t*)(0x20005000 + i)) ;
+
+
+
+                uart2_send_data(color);
+
             }
         }
+
         DVP->CR0 |= RB_DVP_ENABLE;
         DVP->DMA_BUF0 = JPEG_DVPDMAaddr0;
         DVP->DMA_BUF1 = JPEG_DVPDMAaddr1;
-        href_cnt = 0;
         addr_cnt = 0;
+        href_cnt = 0;
+
 #endif
     }
     if(DVP->IFR & RB_DVP_IF_STR_FRM)
     {
         //rt_kprintf("str_frm\r\n");
         DVP->IFR &= ~RB_DVP_IF_STR_FRM;
+        //rt_kprintf("DVP START FRAM frame_cnt%d\r\n",frame_cnt);
         frame_cnt++;
     }
     if(DVP->IFR & RB_DVP_IF_STP_FRM)
@@ -1045,12 +1236,73 @@ void DVP_IRQHandler(void)
     {
         //rt_kprintf("fifo done\r\n");
         DVP->IFR &= ~RB_DVP_IF_FIFO_OV;
-    }
+    }*/
+    //行中断
+    if (DVP->IFR & RB_DVP_IF_ROW_DONE)
+    {
+        /* Write 0 clear 0 */
+        DVP->IFR &= ~RB_DVP_IF_ROW_DONE;  //clear Interrupt
+
+        #if (DVP_Work_Mode == RGB565_MODE)
+                if (addr_cnt%2)     //buf1 done
+                {
+                    addr_cnt++;
+                    //Send DVP data to LCD
+                    DMA_Cmd(DMA2_Channel5, DISABLE );
+                    DMA_SetCurrDataCounter(DMA2_Channel5,lcddev.width);
+                    DMA2_Channel5->PADDR = RGB565_DVPDMAaddr0;
+                    DMA_Cmd(DMA2_Channel5, ENABLE);
+
+                }
+                else                //buf0 done
+                {
+                    addr_cnt++;
+                    //Send DVP data to LCD
+                    DMA_Cmd(DMA2_Channel5, DISABLE );
+                    DMA_SetCurrDataCounter(DMA2_Channel5,lcddev.width);
+                    DMA2_Channel5->PADDR = RGB565_DVPDMAaddr1;
+                    DMA_Cmd(DMA2_Channel5, ENABLE);
+                }
+
+                //href_cnt++;
+                //rt_kprintf("cnt:%d",addr_cnt);
+
+        #endif
+
+            }
+
+            if (DVP->IFR & RB_DVP_IF_FRM_DONE)//帧中断
+            {
+                DVP->IFR &= ~RB_DVP_IF_FRM_DONE;  //clear Interrupt
+                //rt_kprintf("cnt:%d",addr_cnt);
+                //rt_kprintf("fram_cnt:%d\r\n",frame_cnt);
+                addr_cnt = 0;
+                //href_cnt = 0;
+
+            }
+    if (DVP->IFR & RB_DVP_IF_STR_FRM)
+         {
+          DVP->IFR &= ~RB_DVP_IF_STR_FRM;
+
+          frame_cnt++;
+
+         }
+
+    if (DVP->IFR & RB_DVP_IF_STP_FRM)
+        {
+           DVP->IFR &= ~RB_DVP_IF_STP_FRM;
+
+        }
+
+    if (DVP->IFR & RB_DVP_IF_FIFO_OV)
+        {
+          DVP->IFR &= ~RB_DVP_IF_FIFO_OV;
+        }
 }
 
 u8 OV7670_Init(void)
 {
-    uint16_t i = 0;
+    //uint16_t i = 0;
     uint8_t regL;
     uint8_t regH;
     uint16_t reg;
@@ -1105,12 +1357,69 @@ u8 OV7670_Init(void)
 }
    rt_thread_mdelay(100);
    ov7670_setreg();
-   OV7670_config_window(272, 12, 320, 240);
+   OV7670_config_window(184, 10, 320, 240);//
    return RT_EOK;
 
 }
 
-MSH_CMD_EXPORT(OV7670_Init,ov7670_test);
+void OV7670_CreatColor()
+{
+    uint16_t i,j,k = 0;
+    uint16_t color = 0;
+    //列缓存区
+    uint16_t buff[320];
+
+    while(1)
+    {
+        //数据开始(从上往下，从左往右)
+        //printf("data:\n");
+
+        for(i=0;i<240;i++)
+        {
+            //printf("L");//列有效
+            for(j=0;j < 320;j++)//一列
+            {
+                //生成彩条  9E F7,8D EF ,9E 3F,83 1F,FF F0,43 D9,95 28,82 10
+                if(i < 30)
+                {
+                    color = 0x9EF7;
+                }else if(i < 60)
+                {
+                    color = 0x8DEF;
+                }else if(i < 90)
+                {
+                    color = 0x9E3F;
+                }else if(i < 120)
+                {
+                    color = 0x831F;
+                }else if(i < 150)
+                {
+                    color = 0xFFF0;
+                }else if(i < 180)
+                {
+                    color = 0x43D9;
+                }else if(i < 210)
+                {
+                    color = 0x9528;
+                }else
+                {
+                    color = 0x8210;
+                }
+                buff[j] = color;
+            }
+            //准备好一列数据
+            for(k=0;k<320;k++)
+            {
+                uart2_send_data(buff[k]);//打印色条
+            }
+            //printf("\n");
+        }
+    }
+}
+
+
+//MSH_CMD_EXPORT(OV7670_Init,ov7670_test);
 MSH_CMD_EXPORT(DVP_Init,dvp_sendto_usart1_test);
 
+MSH_CMD_EXPORT(OV7670_CreatColor,ov760_creat_color);
 #endif /* APPLICATIONS_OV7670_C_ */

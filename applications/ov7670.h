@@ -22,10 +22,12 @@
 
 #define PIC_START_X 0
 #define PIC_START_Y 0
-#define PIC_WIDTH 320
-#define PIC_HEIGHT 200
+#define PIC_WIDTH 320//宽
+#define PIC_HEIGHT 240//长
 
 extern uint16_t camera_buffer[PIC_WIDTH * PIC_HEIGHT + 27];
+extern rt_uint32_t  RGB565_DVPDMAaddr0;
+extern rt_uint32_t  RGB565_DVPDMAaddr1;
 
 #define OV7670_MID 0X7FA2
 #define OV7670_PID 0X7673
@@ -172,7 +174,7 @@ extern uint16_t camera_buffer[PIC_WIDTH * PIC_HEIGHT + 27];
 
 //DVP相关设置
 #define JPEG_MODE 1
-#define DVP_Work_Mode JPEG_MODE
+#define DVP_Work_Mode RGB565_MODE
 
 
 
@@ -181,6 +183,7 @@ extern uint16_t camera_buffer[PIC_WIDTH * PIC_HEIGHT + 27];
 
 void CLK_init_ON(void);
 void CLK_init_OFF(void);
+void uart2_send_data(rt_uint16_t t);
 
 void OV7670_config_window(unsigned int startx,unsigned int starty,unsigned int width, unsigned int height);
 unsigned char OV7670_init(void);
