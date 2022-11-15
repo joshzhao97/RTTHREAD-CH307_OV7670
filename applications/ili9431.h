@@ -64,7 +64,7 @@ typedef struct
 #define D2U_L2R  6
 #define D2U_R2L  7
 
-#define DFT_SCAN_DIR  L2R_U2D
+#define DFT_SCAN_DIR  L2R_U2D//不是U2DL2R？
 
 /* Colour */
 #define WHITE            0xFFFF
@@ -106,6 +106,7 @@ void LCD_Fast_DrawPoint(u16 x,u16 y,u16 color);
 void LCD_ShowChar(u16 x,u16 y,u8 num,u8 size,u8 mode);
 void LCD_ShowNum(u16 x,u16 y,u32 num,u8 len,u8 size);
 void LCD_ShowString(u16 x,u16 y,u16 width,u16 height,u8 size,u8 *p);
+u16 LCD_ReadPoint(u16 x, u16 y);
 
 
 

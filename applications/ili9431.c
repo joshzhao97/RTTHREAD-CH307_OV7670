@@ -361,7 +361,7 @@ void LCD_Init(void)
     RCC_AHBPeriphClockCmd(RCC_AHBPeriph_FSMC,ENABLE);
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB|RCC_APB2Periph_GPIOD|RCC_APB2Periph_GPIOE,ENABLE);
     //pwm背光控制
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_14;
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;//占用spi2换成pb4
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOB, &GPIO_InitStructure);
@@ -535,7 +535,7 @@ void LCD_Init(void)
     }
 
     LCD_Display_Dir(1);
-    GPIO_SetBits(GPIOB,GPIO_Pin_14);
+    GPIO_SetBits(GPIOB,GPIO_Pin_4);
     LCD_Clear(WHITE);
 
 }
@@ -705,4 +705,41 @@ void LCD_Fast_DrawPoint(u16 x,u16 y,u16 color)
     }
     LCD->LCD_REG=lcddev.wramcmd;
     LCD->LCD_RAM=color;
+}
+
+
+//读取个某点的颜色值
+//x,y:坐标
+//返回值:此点的颜色
+u16 LCD_ReadPoint(u16 x, u16 y)
+{
+    u16 r, g, b;
+
+    if (x >= lcddev.width || y >= lcddev.height)return 0;   //超过了范围,直接返回
+
+    LCD_SetCursor(x, y);
+
+    if (lcddev.id == 0X5510)    //5510 发送读GRAM指令
+    {
+        LCD_WR_REG(0X2E00);
+    }
+    else                        //其他IC(9341/5310/1963/7789)发送读GRAM指令
+    {
+        LCD_WR_REG(0X2E);
+    }
+
+    r = LCD_RD_DATA();          //假读
+
+    if (lcddev.id == 0X1963)    //对1963来说,是真读
+    {
+        return r;               //1963直接读就可以
+    }
+
+    r = LCD_RD_DATA();          //实际坐标颜色
+
+    //9341/5310/5510/7789 要分2次读出
+    b = LCD_RD_DATA();
+    g = r & 0XFF;               //对于 9341/5310/5510/7789, 第一次读取的是RG的值,R在前,G在后,各占8位
+    g <<= 8;
+    return (((r >> 11) << 11) | ((g >> 10) << 5) | (b >> 11));  // 9341/5310/5510/7789 需要公式转换一下
 }

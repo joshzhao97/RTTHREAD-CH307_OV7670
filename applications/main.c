@@ -9,8 +9,10 @@
 *******************************************************************************/
 /*  SCL-PB10,SDA-PB11,VS-pa5,HS-PA4,PCLK-PA6,MCLK-PA8,D7-PB9,D6-PB8,D5-PB6,D4-PC11,D3-PC9,D2-PC8,D1-PA10,D0-PA9,RST-PB0（or gnd?）,PWDN-PB1(or gnd?)*/
 //由于杜邦线信号干扰图像不稳定帧率40FPS
-
-/*56
+//使用spi2挂载sd卡文件系统：cs gpiob_12,, spi2_clk gpiob_13,,,  spi_miso gpiob_14,,,  spi_mosi gpiob_15,,,
+//目前挂载文件系统成功，函数接口实现，保存文件有时成功
+//key:PE4按下拍照
+/*
  *@Note
    TFTLCD箭殻�
   LCD！！PIN�
@@ -35,7 +37,7 @@
     PD8 ！！FSMC_D13
     PD9 ！！FSMC_D14
     PD10！！FSMC_D15
-    PB14！！IO_BLCTR
+    PB14！！IO_BLCTR//换成pb4
     PA8 ！！IO_MISO_NC
     PB3 ！！IO_MOSI_SDA
     PB15！！IO_TKINT
@@ -48,6 +50,8 @@
 #include <rthw.h>
 #include "drivers/pin.h"
 #include <board.h>
+#include <rtdbg.h>
+#include <rtdevice.h>
 #include <drv_spi.h>
 #include <dfs_elm.h>
 #include <dfs_fs.h>
@@ -57,6 +61,7 @@
 #include <rtdbg.h>
 #include "ili9431.h"
 #include "ov7670.h"
+//#include <ff.h>
 
 
 /* Global typedef */
@@ -65,12 +70,13 @@
 /* Global define */
 
 
-#define LED0_PIN  35   //PC3
 #define RGB565_ROW_NUM   240
 #define RGB565_COL_NUM   640   //Col * 2
 /* Global Variable */
 rt_device_t dev;
 extern rt_uint32_t frame_cnt;
+
+rt_sem_t sd_sem = RT_NULL;
 
 rt_uint32_t  RGB565_DVPDMAaddr0 = 0x2000A000;
 rt_uint32_t  RGB565_DVPDMAaddr1 = 0x2000A000 + RGB565_COL_NUM;
@@ -142,8 +148,6 @@ void DMA_SRAMLCD_Enable(void)
     DMA_Cmd(DMA2_Channel5, ENABLE);
 }
 
-
-
 /*********************************************************************
  * @fn      main
  *
@@ -156,6 +160,7 @@ int main(void)
 {
     rt_uint32_t FPS = 0;
     rt_uint32_t TEMP = 0;
+    //int ret;
     //u8 lightmode=0,saturation=2,brightness=2,contrast=2,effect=0;
     rt_kprintf("MCU: CH32V307\n");
 	rt_kprintf("SysClk: %dHz\n",SystemCoreClock);
@@ -177,6 +182,11 @@ int main(void)
 
     rt_kprintf("start count\r\n");
 
+    sd_sem = rt_sem_create("sd_sem", 1, RT_IPC_FLAG_FIFO);
+    if(sd_sem == RT_NULL)
+        rt_kprintf("create sd_sem failed\r\n");
+    rt_kprintf("create sd_sem success\r\n");
+
     /* LCD reset */
     LCD_Reset_GPIO_Init();
     GPIO_ResetBits(GPIOA,GPIO_Pin_15);
@@ -196,6 +206,8 @@ int main(void)
     //OV7670_Contrast(contrast);
     //OV7670_Special_Effects(effect);
 
+
+
 	while(1)
 	{
 	    TEMP = frame_cnt;
@@ -205,30 +217,75 @@ int main(void)
 	    rt_thread_mdelay(1000);
 
 	    FPS = frame_cnt - TEMP;
-	    rt_kprintf("FPS:%d",FPS);
+	    //rt_kprintf("FPS:%d",FPS);暂时不需要打印
 	}
 }
 
 
-/*********************************************************************
- * @fn      led
- *
- * @brief   gpio operation by pins driver.
- *
- * @return  none
- */
-int led(void)
+static int rt_hw_spi1_tfcard(void)
 {
-
-rt_thread_mdelay(1);
-
-
-    return 0;
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE );
+    rt_hw_spi_device_attach("spi2", "spi10", GPIOB, GPIO_Pin_12);//CS片选信号
+    rt_kprintf(" attach spi device\r\n");
+    return msd_init("sd0","spi10");
 }
 
 
 
-MSH_CMD_EXPORT(led,  led sample by using I/O drivers);
+
+static void sd_mount(void *parameter)
+{
+    //rt_err_t ret;
+    while (1)
+    {
+        rt_thread_mdelay(500);
+        if(rt_device_find("sd0") != RT_NULL)
+        {
+            if (dfs_mount("sd0", "/", "elm", 0, 0) == RT_EOK)
+            {
+                rt_kprintf("sd card mount success\r\n");
+                LOG_I("sd card mount to '/'");
+                rt_sem_release(sd_sem);
+                break;
+            }
+            else
+            {
+
+                LOG_W("sd card mount to '/' failed!");
+              //ret =  rt_get_errno();
+            }
+        }
+    }
+}
+
+int sd_start(void)
+{
+
+    rt_thread_t tid;
+
+    tid = rt_thread_create("sd_mount", sd_mount, RT_NULL,
+                           2048, 9, 20);
+    if (tid != RT_NULL)
+    {
+        rt_kprintf("enter sd_mount thread\r\n");
+        rt_thread_startup(tid);
+        return RT_EOK;
+    }
+    else
+    {
+        LOG_E("create sd_mount thread err!");
+        return RT_ERROR;
+    }
+
+}
+
+
+INIT_DEVICE_EXPORT(rt_hw_spi1_tfcard);
+MSH_CMD_EXPORT(sd_start,  start sd thread);
+
+
+
+
 
 
 

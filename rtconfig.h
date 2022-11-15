@@ -100,10 +100,10 @@
 /* Device Drivers */
 
 #define RT_USING_DEVICE_IPC
-#define RT_PIPE_BUFSZ 8192
+#define RT_PIPE_BUFSZ 512
 #define RT_USING_SERIAL
 #define RT_USING_SERIAL_V1
-#define RT_SERIAL_RB_BUFSZ 10240
+#define RT_SERIAL_RB_BUFSZ 64
 #define RT_USING_PIN
 #define RT_USING_SPI
 #define RT_USING_SPI_MSD
@@ -249,7 +249,7 @@
 #define BSP_USING_UART2
 #define BSP_UART2_FIFO_SIZE 10
 #define BSP_USING_SPI
-#define BSP_USING_SPI1
+#define BSP_USING_SPI2
 /* end of On-chip Peripheral Drivers */
 
 /* Board extended module Drivers */
